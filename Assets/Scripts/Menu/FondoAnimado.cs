@@ -8,7 +8,7 @@ namespace FluxLab
 {
     /// <summary>
     /// Fondo animado con cuadros sueltos (StreamingAssets/Menu/FondoAnimado/fondo_00.jpg, fondo_01.jpg...).
-    /// Mientras cargan se ve la imagen estática del fondo; al terminar empieza a reproducirse en bucle.
+    /// El primer cuadro se pone al instante, para no mostrar el fondo estático viejo mientras carga el resto.
     /// </summary>
     public class FondoAnimado : MonoBehaviour
     {
@@ -36,18 +36,25 @@ namespace FluxLab
             var animado = imagen.gameObject.AddComponent<FondoAnimado>();
             animado.imagen = imagen;
             animado.archivos = archivos;
+            animado.cuadros = new Texture2D[archivos.Length];
+            animado.cuadros[0] = Cargar(archivos[0]);
+            imagen.texture = animado.cuadros[0];
             return true;
+        }
+
+        static Texture2D Cargar(string archivo)
+        {
+            var textura = new Texture2D(2, 2, TextureFormat.RGB24, false);
+            textura.LoadImage(File.ReadAllBytes(archivo));
+            textura.filterMode = FilterMode.Bilinear;
+            return textura;
         }
 
         IEnumerator Start()
         {
-            cuadros = new Texture2D[archivos.Length];
-            for (int i = 0; i < archivos.Length; i++)
+            for (int i = 1; i < archivos.Length; i++)
             {
-                var textura = new Texture2D(2, 2, TextureFormat.RGB24, false);
-                textura.LoadImage(File.ReadAllBytes(archivos[i]));
-                textura.filterMode = FilterMode.Bilinear;
-                cuadros[i] = textura;
+                cuadros[i] = Cargar(archivos[i]);
                 yield return null; // un cuadro por frame para no congelar el menú al abrir
             }
 
