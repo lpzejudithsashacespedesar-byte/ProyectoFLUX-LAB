@@ -598,7 +598,7 @@ namespace FluxLab
             if (nivel >= 5 || nivel + 1 > AjustesJuego.NivelAlcanzado)
                 return;
             AjustesJuego.ElegirNivel(nivel + 1);
-            SceneManager.LoadScene(nivel + 1 == 2 ? "Nivel2_Frascos" : "MesaDeAlquimia");
+            SceneManager.LoadScene(NivelesTaller.EscenaDe(nivel + 1));
         }
 
         void UpdateHud()

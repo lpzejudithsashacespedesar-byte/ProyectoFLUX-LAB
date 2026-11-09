@@ -49,7 +49,9 @@ namespace FluxLab
             {
                 nombre = "Torre de Cristal",
                 corto = "Cristal",
-                detalle = "Cuatro ingredientes y el tiempo se acorta.",
+                // Usa la mesa de frascos (Nivel4_Cristal): uno por uno, bandeja barajada, sombras y espejo.
+                // Sus números de verdad están en la escena Nivel4_Cristal (MesaDeFrascos > Config).
+                detalle = "Uno por uno, sombras y recetas al revés.",
                 receta = 4,
                 rondas = 4,
                 segundos = 3.2f
@@ -65,10 +67,11 @@ namespace FluxLab
             }
         };
 
-        /// <summary>Escena que abre cada nivel. El Pasillo de Frascos tiene la suya; los demás usan la mesa general.</summary>
+        /// <summary>Escena que abre cada nivel. El Pasillo de Frascos y la Torre de Cristal tienen la suya; los demás usan la mesa general.</summary>
         public static string EscenaDe(int nivel)
         {
             if (nivel == 2) return "Nivel2_Frascos";
+            if (nivel == 4) return "Nivel4_Cristal";   // Torre de Cristal
             return "MesaDeAlquimia";
         }
 
