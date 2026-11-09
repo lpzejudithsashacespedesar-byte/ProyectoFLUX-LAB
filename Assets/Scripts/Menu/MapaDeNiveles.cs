@@ -531,7 +531,7 @@ namespace FluxLab
                 return;
             SonarClick();
             AjustesJuego.ElegirNivel(elegido + 1);
-            SceneManager.LoadScene(elegido + 1 == 2 ? "Nivel2_Frascos" : "MesaDeAlquimia");
+            SceneManager.LoadScene(NivelesTaller.EscenaDe(elegido + 1));
         }
 
         void Volver()
