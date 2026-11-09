@@ -216,6 +216,18 @@ namespace FluxLab.Nivel2
             return Borde(1f - Mathf.Abs(x) / Mathf.Max(0.01f, ancho), 0.2f) * (Mathf.Abs(y) < 0.95f ? 1f : 0f);
         });
 
+        static Sprite cristal;
+
+        /// <summary>Fragmento de cristal: un rombo alargado con una arista más brillante en el medio.</summary>
+        public static Sprite Cristal => cristal != null ? cristal : cristal = Crear(64, (x, y) =>
+        {
+            float rombo = 1f - (Mathf.Abs(x) / 0.5f + Mathf.Abs(y));
+            if (rombo <= 0f)
+                return 0f;
+            float arista = Mathf.Clamp01(1f - Mathf.Abs(x) / 0.06f);
+            return Borde(rombo, 0.08f) * (0.7f + 0.3f * arista);
+        });
+
         static float Borde(float valor, float suavidad) => Mathf.Clamp01(valor / suavidad);
 
         static Sprite Crear(int lado, System.Func<float, float, float> alfa)
