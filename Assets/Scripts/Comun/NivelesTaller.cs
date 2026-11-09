@@ -29,10 +29,12 @@ namespace FluxLab
             {
                 nombre = "Pasillo de Frascos",
                 corto = "Frascos",
-                detalle = "La receta sigue siendo de tres, con menos tiempo.",
+                // Por ahora con la dificultad de la Mesa del Aprendiz.
+                // Sus números de verdad están en la escena Nivel2_Frascos (MesaDeFrascos > Config).
+                detalle = "Tres ingredientes y cinco segundos para mirar.",
                 receta = 3,
                 rondas = 3,
-                segundos = 4f
+                segundos = 5f
             },
             new Taller
             {
@@ -62,6 +64,13 @@ namespace FluxLab
                 segundos = 2.5f
             }
         };
+
+        /// <summary>Escena que abre cada nivel. El Pasillo de Frascos tiene la suya; los demás usan la mesa general.</summary>
+        public static string EscenaDe(int nivel)
+        {
+            if (nivel == 2) return "Nivel2_Frascos";
+            return "MesaDeAlquimia";
+        }
 
         public static Taller De(int nivel)
         {
