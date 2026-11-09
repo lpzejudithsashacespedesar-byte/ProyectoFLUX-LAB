@@ -27,7 +27,7 @@ namespace FluxLab
         RawImage iconoMusica;
         GameObject panelOpciones;
         GameObject panelLogros;
-        Text textoLogros;
+        PanelDeLogros libroLogros;
         RectTransform letreroTitulo;
         float letreroBaseY;
 
@@ -52,6 +52,11 @@ namespace FluxLab
                 if (panelFicha != null && panelFicha.activeSelf)
                 {
                     panelFicha.SetActive(false);
+                    return;
+                }
+                if (libroLogros != null && libroLogros.EstaAbierto)
+                {
+                    CerrarPaneles();
                     return;
                 }
                 if (panelOpciones.activeSelf || panelLogros.activeSelf)
@@ -203,11 +208,9 @@ namespace FluxLab
         {
             panelOpciones = CrearPanel(raiz, "PanelOpciones", "Opciones", "La música y los efectos se guardan en este equipo.", CerrarPaneles);
             panelLogros = CrearPanel(raiz, "PanelLogros", "Logros", "", CerrarPaneles);
-            textoLogros = Texto(panelLogros.transform.GetChild(1), "", 30, Hex("#5a3b24"), FontStyle.Normal);
-            textoLogros.rectTransform.anchoredPosition = new Vector2(0f, 16f);
-            textoLogros.rectTransform.sizeDelta = new Vector2(640f, 160f);
             panelOpciones.SetActive(false);
             panelLogros.SetActive(false);
+            libroLogros = PanelDeLogros.Crear(raiz);
         }
 
         GameObject CrearPanel(Transform padre, string nombre, string titulo, string cuerpo, UnityEngine.Events.UnityAction cerrar)
@@ -602,18 +605,16 @@ namespace FluxLab
         void AbrirLogros()
         {
             CerrarPaneles();
-            int puntos = AjustesJuego.MejorPuntaje;
-            int pociones = AjustesJuego.PocionesHechas;
-            textoLogros.text = puntos == 0 && pociones == 0
-                ? "Todavía no hay marcas.\nCompleta la primera prueba en la mesa."
-                : "Mejor puntaje:  " + puntos + "\nPociones acertadas:  " + pociones;
-            panelLogros.SetActive(true);
+            if (libroLogros != null)
+                libroLogros.Abrir();
         }
 
         void CerrarPaneles()
         {
             panelOpciones.SetActive(false);
             panelLogros.SetActive(false);
+            if (libroLogros != null)
+                libroLogros.Cerrar();
             if (puntajeTexto != null)
                 puntajeTexto.text = AjustesJuego.MejorPuntaje.ToString();
         }
