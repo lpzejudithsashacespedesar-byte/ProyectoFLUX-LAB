@@ -148,6 +148,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c4dd0bf0dbb24ac1ae256e34d2614edd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FluxLab.Nivel2.MesaDeFrascos
+  nivel: 2
+  config:
+    rondas: 3
+    largoReceta: 3
+    permitirRepetidos: 0
+    recetaCompleta: 1
+    segundosRecetaCompleta: 5
+    revisarAlFinal: 1
+    usarVidas: 0
+    repetirRecetaAlFallar: 0
+    pistaPorDuda: 0
+    barajarBandeja: 0
+    rondaEspejoFinal: 0
+    tiposDeRonda: []
+    anunciarEspejo: 0
+    estrellasParaAvanzar: 1
 --- !u!4 &1209257136
 Transform:
   m_ObjectHideFlags: 0
