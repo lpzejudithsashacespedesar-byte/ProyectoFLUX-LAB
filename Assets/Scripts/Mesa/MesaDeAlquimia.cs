@@ -661,7 +661,7 @@ namespace FluxLab
             Texture2D textura = null;
             if (vistaJardin)
             {
-                textura = Nivel3UI.LeerTextura("Menu/fondo_nivel1.jpg");
+                textura = Nivel3UI.LeerTextura("Menu/fondo_nivel1.png");
                 fondoPintado = textura != null;
             }
             if (textura == null && vistaJardin)
@@ -1073,7 +1073,7 @@ namespace FluxLab
             float anchoCaldero = dibujoCaldero != null ? altoCaldero * dibujoCaldero.rect.width / dibujoCaldero.rect.height : 280f;
             float centroY = dibujoCaldero != null ? -255f - altoCaldero * 0.057f + altoCaldero * 0.5f : 128f;
             float yBrillo = dibujoCaldero != null ? altoCaldero * 0.252f : 8f;
-            // fondo_nivel1.jpg ya trae el caldero pintado. El brillo y las burbujas caen en su boca
+            // fondo_nivel1.png ya trae el caldero pintado. El brillo y las burbujas caen en su boca
             // (lienzo 1920x1080; el líquido queda en el centro, un poco debajo del horizonte).
             if (fondoPintado)
             {
