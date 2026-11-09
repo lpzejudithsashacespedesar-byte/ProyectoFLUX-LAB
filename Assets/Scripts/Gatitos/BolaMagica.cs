@@ -24,6 +24,11 @@ namespace FluxLab
         Image anillo;
         Image centro;
 
+        // Lanzada hacia un punto (LanzarHacia): a los "llegada" segundos está justo ahí, estalla y avisa.
+        float llegada = -1f;
+        float escala = 1f;
+        System.Action alLlegar;
+
         /// <param name="direccion">1 = hacia la derecha, -1 = hacia la izquierda.</param>
         public static void Lanzar(Transform lienzo, Vector2 posicion, float direccion, float impulsoVertical = 120f)
         {
@@ -32,6 +37,26 @@ namespace FluxLab
             var bola = go.AddComponent<BolaMagica>();
             bola.inicio = posicion;
             bola.velocidad = new Vector2(direccion * 470f, impulsoVertical);
+            bola.Armar();
+        }
+
+        /// <summary>
+        /// Lanza la bola en arco desde "desde" hasta "destino": llega en "segundos", estalla ahí y avisa con alLlegar.
+        /// "escala" la achica o agranda (1 = como la de siempre).
+        /// </summary>
+        public static void LanzarHacia(Transform lienzo, Vector2 desde, Vector2 destino, float segundos = 1f, float escala = 1f, System.Action alLlegar = null)
+        {
+            var go = new GameObject("BolaMagica", typeof(RectTransform));
+            go.transform.SetParent(lienzo, false);
+            var bola = go.AddComponent<BolaMagica>();
+            float t = Mathf.Max(0.2f, segundos);
+            bola.inicio = desde;
+            // Misma "gravedad" que el arco normal (250): se calcula la velocidad para caer justo en el destino.
+            bola.velocidad = new Vector2((destino.x - desde.x) / t, (destino.y - desde.y + 250f * t * t) / t);
+            bola.llegada = t;
+            bola.duracion = t + 0.35f;
+            bola.escala = escala;
+            bola.alLlegar = alLlegar;
             bola.Armar();
         }
 
@@ -69,15 +94,24 @@ namespace FluxLab
                 return;
             }
 
+            // Lanzada hacia un punto: al llegar se queda ahí estallando y avisa una sola vez.
+            float t = llegada > 0f ? Mathf.Min(vida, llegada) : vida;
+            if (llegada > 0f && vida >= llegada && alLlegar != null)
+            {
+                System.Action aviso = alLlegar;
+                alLlegar = null;
+                aviso();
+            }
+
             // Trayectoria en arco: velocidad horizontal constante, vertical con "gravedad".
-            Vector2 posicion = inicio + new Vector2(velocidad.x * vida, velocidad.y * vida - 250f * vida * vida);
+            Vector2 posicion = inicio + new Vector2(velocidad.x * t, velocidad.y * t - 250f * t * t);
             rect.anchoredPosition = posicion;
 
             float pulso = 1f + Mathf.Sin(vida * 14f) * 0.1f;
             float aparece = Mathf.Lerp(0.35f, 1f, Mathf.SmoothStep(0f, 1f, vida / 0.4f)); // nace pequeña y crece
             float desvanece = Mathf.Clamp01((1f - avance) / 0.2f);   // se apaga al final
             float estalla = 1f + Mathf.Clamp01((avance - 0.85f) / 0.15f) * 0.8f; // y se expande al final
-            rect.localScale = Vector3.one * (pulso * aparece * estalla);
+            rect.localScale = Vector3.one * (pulso * aparece * estalla * escala);
             anillo.rectTransform.localRotation = Quaternion.Euler(0f, 0f, vida * 90f);
             halo.color = new Color(0.2f, 0.75f, 1f, 0.55f * desvanece);
             anillo.color = new Color(0.45f, 0.9f, 1f, 0.7f * desvanece);
@@ -102,8 +136,8 @@ namespace FluxLab
             imagen.raycastTarget = false;
             var r = imagen.rectTransform;
             r.anchorMin = r.anchorMax = new Vector2(0.5f, 0.5f);
-            r.anchoredPosition = posicion + Random.insideUnitCircle * 55f * Tamano;
-            r.sizeDelta = Vector2.one * Random.Range(22f, 52f) * Tamano;
+            r.anchoredPosition = posicion + Random.insideUnitCircle * 55f * Tamano * escala;
+            r.sizeDelta = Vector2.one * Random.Range(22f, 52f) * Tamano * escala;
             go.AddComponent<ChispaFugaz>();
         }
 
