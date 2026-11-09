@@ -150,6 +150,30 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FluxLab.Nivel2.MesaDeFrascos
   nivel: 4
+  config:
+    mostrarBienvenida: 1
+    conteoInicial: 1
+    rondas: 4
+    largoReceta: 4
+    permitirRepetidos: 1
+    recetaCompleta: 0
+    revisarAlFinal: 0
+    usarVidas: 1
+    repetirRecetaAlFallar: 1
+    pistaPorDuda: 1
+    segundosParaPista: 5
+    segundosPorIngrediente: 0.9
+    pausaEntreIngredientes: 0.25
+    vidas: 3
+    barajarBandeja: 1
+    rondaEspejoFinal: 1
+    tiposDeRonda:
+    - 0
+    - 1
+    - 2
+    - 3
+    anunciarEspejo: 1
+    estrellasParaAvanzar: 2
 --- !u!114 &1209257137
 MonoBehaviour:
   m_ObjectHideFlags: 0
