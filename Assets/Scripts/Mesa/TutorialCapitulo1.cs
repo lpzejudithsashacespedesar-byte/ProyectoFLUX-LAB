@@ -29,13 +29,13 @@ namespace FluxLab
             new Hito
             {
                 titulo = "La promesa",
-                relato = "«Esta es la Mesa del Aprendiz: tres ingredientes y tres rondas. Cada acierto deja a Magnus un paso más cerca del Caldero Mayor.»",
+                relato = "«Esta es la Mesa del Aprendiz: cuatro ingredientes y tres rondas. Cada acierto deja a Magnus un paso más cerca del Caldero Mayor.»",
                 punto = new Vector2(-690f, 398f)
             },
             new Hito
             {
                 titulo = "El pergamino",
-                relato = "«El pergamino muestra la receta de izquierda a derecha. La barra verde dura cinco segundos. Léela con él, antes de que se apague.»",
+                relato = "«El pergamino muestra la receta de izquierda a derecha. La barra verde dura cuatro segundos. Léela con él, antes de que se apague.»",
                 punto = new Vector2(20f, 348f)
             },
             new Hito

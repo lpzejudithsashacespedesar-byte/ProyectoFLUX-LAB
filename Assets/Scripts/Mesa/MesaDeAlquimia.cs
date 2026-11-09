@@ -144,6 +144,21 @@ namespace FluxLab
         Image brilloReceta;
         Coroutine focoReceta;
         BuhoLuma buho;
+        bool memorizando;
+        float tiempoExtra;
+        bool lentoSiguiente;
+        bool escudoArmado;
+        bool miradaActiva;
+        int pistaIndice = -1;
+        GameObject barraPoderes;
+        RectTransform[] anclasPoder;
+        Image[] fondoPoder;
+        Image[] lucesPoder;
+        Image[] candadoPoder;
+        Text[] marcaPoder;
+        Text avisoPoder;
+        float poderesDesde;
+        int cartelId;
         static readonly Vector2 RecetaGrande = new Vector2(20f, 188f);
         const float EscalaRecetaGrande = 1.42f;
 
@@ -198,6 +213,7 @@ namespace FluxLab
 
         void Update()
         {
+            AnimarPoderes();
             AnimarMagnus();
             AnimarFestejo();
 
@@ -258,6 +274,17 @@ namespace FluxLab
                 panelSalir.SetActive(false);
 
             StopAllCoroutines();
+            LogrosJuego.PrepararVisita();
+            memorizando = false;
+            tiempoExtra = 0f;
+            lentoSiguiente = false;
+            escudoArmado = false;
+            miradaActiva = false;
+            pistaIndice = -1;
+            if (barraPoderes != null)
+                barraPoderes.SetActive(true);
+            poderesDesde = Time.unscaledTime;
+            RefrescarPoderes();
             score = 0;
             correct = 0;
             racha = 0;
@@ -333,6 +360,22 @@ namespace FluxLab
 
             if (placed.Count < largoReceta)
                 return;
+
+            if (!Matches() && escudoArmado)
+            {
+                escudoArmado = false;
+                placed.RemoveAt(placed.Count - 1);
+                RefreshSlots(popLast: false);
+                promptLabel.text = "El escudo aguantó. Prueba otro ingrediente.";
+                promptLabel.color = Hex("#8a5a20");
+                if (timerTexto != null)
+                    timerTexto.text = "Escudo";
+                PlayOne("hechizo");
+                buho?.MirarCaldero();
+                RefrescarPoderes();
+                StartCoroutine(CartelPoder("El escudo aguantó"));
+                return;
+            }
 
             inputOpen = false;
             bool ok = Matches();
@@ -423,11 +466,23 @@ namespace FluxLab
             if (cauldronGlow != null)
                 cauldronGlow.color = new Color(0.45f, 0.9f, 0.5f, 0.35f);
 
-            float remaining = segundosMemoria;
+            pistaIndice = -1;
+            float extraLento = lentoSiguiente ? segundosMemoria * 0.7f : 0f;
+            lentoSiguiente = false;
+            float tope = segundosMemoria + extraLento;
+            float remaining = tope;
+            memorizando = true;
             while (remaining > 0f)
             {
+                if (tiempoExtra > 0f)
+                {
+                    remaining += tiempoExtra;
+                    tope += tiempoExtra;
+                    tiempoExtra = 0f;
+                }
+
                 remaining -= Time.deltaTime;
-                float normalized = Mathf.Clamp01(remaining / segundosMemoria);
+                float normalized = Mathf.Clamp01(remaining / Mathf.Max(0.01f, tope));
                 timerFill.fillAmount = normalized;
                 timerFill.color = Color.Lerp(Hex("#d4654e"), Hex("#7dce63"), normalized);
                 if (timerTexto != null)
@@ -435,6 +490,7 @@ namespace FluxLab
                 yield return null;
             }
 
+            memorizando = false;
             ShowRecipe(false);
             EnfocarReceta(false);
             buho?.MirarCaldero();
@@ -456,6 +512,7 @@ namespace FluxLab
         void ShowResult()
         {
             inputOpen = false;
+            int logrosAntes = LogrosJuego.Mascara();
             float promedio = 0f;
             for (int i = 0; i < recallTimes.Count; i++)
                 promedio += recallTimes[i];
@@ -519,7 +576,18 @@ namespace FluxLab
             siguienteImagen.GetComponent<Button>().interactable = haySiguiente;
             if (vistaJardin)
                 PonerMagnusFinal(estrellas);
+            string logrosNuevos = LogrosJuego.NombresNuevos(logrosAntes, LogrosJuego.Mascara());
+            if (barraPoderes != null)
+                barraPoderes.SetActive(false);
+            if (!string.IsNullOrEmpty(logrosNuevos) && string.IsNullOrEmpty(resultAviso.text))
+            {
+                resultAviso.text = logrosNuevos;
+                resultAviso.color = Nivel3UI.Hex("#ffd86b");
+            }
+
             resultRoot.SetActive(true);
+            if (!string.IsNullOrEmpty(logrosNuevos))
+                StartCoroutine(CartelPoder(logrosNuevos));
             if (vistaJardin)
                 StartCoroutine(EncenderEstrellas(estrellas));
         }
@@ -1331,6 +1399,7 @@ namespace FluxLab
             scoreLabel = MakeText(derecha.transform, "Puntos: 0", 22, Hex("#8a5a20"), FontStyle.Bold);
             scoreLabel.rectTransform.anchoredPosition = new Vector2(0f, -16f);
             scoreLabel.rectTransform.sizeDelta = new Vector2(250f, 30f);
+            ConstruirPoderes(parent);
         }
 
         void BuildHudJardin(Transform parent)
@@ -1359,6 +1428,7 @@ namespace FluxLab
             scoreLabel.rectTransform.anchoredPosition = new Vector2(0f, -22f);
             scoreLabel.rectTransform.sizeDelta = new Vector2(280f, 36f);
             AddOutline(scoreLabel, sombra);
+            ConstruirPoderes(parent);
         }
 
         // Igual que en el nivel 2: pausa, y antes de irse al menú pregunta si está seguro.
@@ -2214,6 +2284,316 @@ namespace FluxLab
             source.volume = volume;
             source.playOnAwake = false;
             source.Play();
+        }
+
+        void ConstruirPoderes(Transform parent)
+        {
+            barraPoderes = new GameObject("Poderes", typeof(RectTransform));
+            barraPoderes.transform.SetParent(parent, false);
+            var raiz = barraPoderes.GetComponent<RectTransform>();
+            raiz.anchorMin = raiz.anchorMax = new Vector2(0.5f, 0.5f);
+            raiz.pivot = new Vector2(0.5f, 0.5f);
+            raiz.anchoredPosition = new Vector2(vistaJardin ? -890f : -870f, -36f);
+            raiz.sizeDelta = new Vector2(140f, 640f);
+
+            string[] artes = { "poder_mirada", "poder_lento", "poder_pista", "poder_deshacer", "poder_escudo" };
+            anclasPoder = new RectTransform[artes.Length];
+            fondoPoder = new Image[artes.Length];
+            lucesPoder = new Image[artes.Length];
+            candadoPoder = new Image[artes.Length];
+            marcaPoder = new Text[artes.Length];
+            Sprite candado = Nivel3UI.SpriteUI("poder_cerrado");
+            for (int i = 0; i < artes.Length; i++)
+            {
+                int indice = i;
+                float y = 236f - i * 118f;
+                var anclaGo = new GameObject("Poder" + i, typeof(RectTransform));
+                anclaGo.transform.SetParent(raiz, false);
+                var ancla = anclaGo.GetComponent<RectTransform>();
+                ancla.anchorMin = ancla.anchorMax = new Vector2(0.5f, 0.5f);
+                ancla.anchoredPosition = new Vector2(0f, y);
+                ancla.sizeDelta = new Vector2(112f, 112f);
+                ancla.localScale = Vector3.zero;
+                anclasPoder[i] = ancla;
+
+                var luz = Nivel3UI.Imagen(ancla, "Brillo", Nivel3UI.LuzSuave(), Vector2.zero, new Vector2(148f, 148f));
+                luz.color = new Color(1f, 0.86f, 0.45f, 0f);
+                lucesPoder[i] = luz;
+
+                Sprite arte = Nivel3UI.SpriteUI(artes[i]);
+                if (arte == null)
+                    arte = Nivel3UI.SpriteUI("boton_cuadrado");
+                var boton = Nivel3UI.Imagen(ancla, "Medalla", arte, Vector2.zero, new Vector2(112f, 112f), true);
+                boton.raycastTarget = true;
+                var click = boton.gameObject.AddComponent<Button>();
+                click.targetGraphic = boton;
+                click.navigation = new Navigation { mode = Navigation.Mode.None };
+                var colores = click.colors;
+                colores.highlightedColor = new Color(1f, 0.95f, 0.82f, 1f);
+                colores.pressedColor = new Color(0.75f, 0.62f, 0.45f, 1f);
+                colores.fadeDuration = 0.06f;
+                click.colors = colores;
+                click.onClick.AddListener(() => UsarPoder((LogrosJuego.Poder)indice));
+                boton.gameObject.AddComponent<HoverScale>().scale = 1.06f;
+                fondoPoder[i] = boton;
+
+                if (candado != null)
+                    candadoPoder[i] = Nivel3UI.Imagen(ancla, "Candado", candado, new Vector2(30f, -30f), new Vector2(42f, 42f), true);
+
+                var fondoMarca = Nivel3UI.Imagen(ancla, "Marca", Nivel3UI.LuzSuave(), new Vector2(34f, -34f), new Vector2(42f, 42f));
+                fondoMarca.color = new Color(0.16f, 0.08f, 0.04f, 0.92f);
+                marcaPoder[i] = Nivel3UI.Texto(fondoMarca.transform, "", 22, Hex("#fff6ea"), Vector2.zero, new Vector2(40f, 30f), TextAnchor.MiddleCenter, true);
+            }
+
+            avisoPoder = Nivel3UI.Texto(parent, "", 42, Hex("#fff6ea"), new Vector2(0f, 70f), new Vector2(900f, 80f), TextAnchor.MiddleCenter, true);
+            avisoPoder.gameObject.SetActive(false);
+            poderesDesde = Time.unscaledTime;
+            RefrescarPoderes();
+        }
+
+        void UsarPoder(LogrosJuego.Poder poder)
+        {
+            if (enPausa || preguntandoSalir || (resultRoot != null && resultRoot.activeSelf))
+                return;
+
+            if (!LogrosJuego.Desbloqueado(poder))
+            {
+                StartCoroutine(CartelPoder(LogrosJuego.Todos[(int)poder].como));
+                PlayOne("error");
+                return;
+            }
+
+            if (poder == LogrosJuego.Poder.Escudo && escudoArmado)
+            {
+                StartCoroutine(CartelPoder("El escudo ya cubre el próximo error"));
+                return;
+            }
+
+            if (LogrosJuego.Cargas(poder) <= 0)
+            {
+                StartCoroutine(CartelPoder("Ya la usaste en este taller"));
+                PlayOne("error");
+                return;
+            }
+
+            switch (poder)
+            {
+                case LogrosJuego.Poder.Mirada:
+                    if (!memorizando && !inputOpen)
+                    {
+                        StartCoroutine(CartelPoder("Espera a que salga la receta"));
+                        return;
+                    }
+                    if (miradaActiva)
+                        return;
+                    if (!LogrosJuego.Gastar(poder))
+                        return;
+                    StartCoroutine(OtraMirada());
+                    break;
+                case LogrosJuego.Poder.Lento:
+                    if (!LogrosJuego.Gastar(poder))
+                        return;
+                    if (memorizando)
+                        tiempoExtra += segundosMemoria * 0.8f;
+                    else
+                        lentoSiguiente = true;
+                    StartCoroutine(CartelPoder(memorizando ? "El tiempo se estira" : "La próxima receta irá más lento"));
+                    PlayOne("burbujas");
+                    break;
+                case LogrosJuego.Poder.Pista:
+                    if (!inputOpen || miradaActiva)
+                    {
+                        StartCoroutine(CartelPoder("Úsala cuando te toque repetir"));
+                        return;
+                    }
+                    if (!LogrosJuego.Gastar(poder))
+                        return;
+                    RevelarPista();
+                    break;
+                case LogrosJuego.Poder.Deshacer:
+                    if (!inputOpen || miradaActiva)
+                    {
+                        StartCoroutine(CartelPoder("Úsala cuando te toque repetir"));
+                        return;
+                    }
+                    if (vertiendo)
+                    {
+                        StartCoroutine(CartelPoder("Espera a que caiga el frasco"));
+                        return;
+                    }
+                    if (placed.Count == 0)
+                    {
+                        StartCoroutine(CartelPoder("Todavía no echaste nada"));
+                        return;
+                    }
+                    if (!LogrosJuego.Gastar(poder))
+                        return;
+                    placed.RemoveAt(placed.Count - 1);
+                    RefreshSlots(popLast: false);
+                    PlayOne("click");
+                    StartCoroutine(CartelPoder("Quitaste el último"));
+                    break;
+            }
+
+            if (poder == LogrosJuego.Poder.Escudo)
+            {
+                if (!LogrosJuego.Gastar(poder))
+                    return;
+                escudoArmado = true;
+                PlayOne("hechizo");
+                StartCoroutine(CartelPoder("Escudo listo"));
+            }
+
+            RefrescarPoderes();
+        }
+
+        IEnumerator OtraMirada()
+        {
+            miradaActiva = true;
+            bool turno = inputOpen;
+            inputOpen = false;
+            ShowRecipe(true);
+            EnfocarReceta(true);
+            buho?.MirarReceta();
+            PlayOne("hechizo");
+            StartCoroutine(CartelPoder(memorizando ? "Mírala otra vez" : "Otra mirada"));
+            RefrescarPoderes();
+
+            float espera = memorizando ? segundosMemoria * 0.35f : 2.1f;
+            if (memorizando)
+                tiempoExtra += espera;
+            yield return new WaitForSeconds(espera);
+
+            if (turno)
+            {
+                ShowRecipe(false);
+                RestaurarPista();
+                EnfocarReceta(false);
+                buho?.MirarCaldero();
+                inputOpen = placed.Count < largoReceta;
+            }
+
+            miradaActiva = false;
+        }
+
+        void RevelarPista()
+        {
+            int i = Mathf.Clamp(placed.Count, 0, largoReceta - 1);
+            pistaIndice = i;
+            RestaurarPista();
+            if (recipeGems[i] != null)
+                StartCoroutine(BrillarPista(recipeGems[i].rectTransform));
+            buho?.MirarReceta();
+            PlayOne("acierto");
+            StartCoroutine(CartelPoder("Una pista: " + catalog[recipe[i]].Nombre));
+        }
+
+        void RestaurarPista()
+        {
+            if (pistaIndice < 0 || pistaIndice >= largoReceta || recipe.Count <= pistaIndice)
+                return;
+            recipeGems[pistaIndice].sprite = Spr(catalog[recipe[pistaIndice]].Sprite);
+            recipeGems[pistaIndice].enabled = true;
+            if (recipeNames != null)
+                recipeNames[pistaIndice].text = catalog[recipe[pistaIndice]].Nombre;
+        }
+
+        IEnumerator BrillarPista(RectTransform gema)
+        {
+            Vector3 baseEscala = Vector3.one;
+            float t = 0f;
+            while (t < 0.45f && gema != null)
+            {
+                t += Time.deltaTime;
+                float e = SalidaSuave(t / 0.45f);
+                gema.localScale = Vector3.one * Mathf.Lerp(0.6f, 1.15f, e);
+                yield return null;
+            }
+            if (gema != null)
+                gema.localScale = baseEscala;
+        }
+
+        void RefrescarPoderes()
+        {
+            if (fondoPoder == null)
+                return;
+
+            for (int i = 0; i < fondoPoder.Length; i++)
+            {
+                var poder = (LogrosJuego.Poder)i;
+                bool abierto = LogrosJuego.Desbloqueado(poder);
+                int cargas = LogrosJuego.Cargas(poder);
+                bool armado = poder == LogrosJuego.Poder.Escudo && escudoArmado;
+                bool cargado = cargas > 0 || armado;
+                fondoPoder[i].color = !abierto
+                    ? new Color(0.38f, 0.34f, 0.3f, 1f)
+                    : cargado ? Color.white : new Color(0.55f, 0.5f, 0.46f, 1f);
+                if (lucesPoder[i] != null && !cargado)
+                    lucesPoder[i].color = new Color(1f, 0.86f, 0.45f, 0f);
+                if (candadoPoder != null && candadoPoder[i] != null)
+                    candadoPoder[i].gameObject.SetActive(!abierto);
+                if (marcaPoder != null && marcaPoder[i] != null)
+                {
+                    marcaPoder[i].transform.parent.gameObject.SetActive(abierto && cargas > 0);
+                    marcaPoder[i].text = cargas.ToString();
+                }
+            }
+        }
+
+        void AnimarPoderes()
+        {
+            if (anclasPoder == null)
+                return;
+
+            float edad = Time.unscaledTime - poderesDesde;
+            for (int i = 0; i < anclasPoder.Length; i++)
+            {
+                if (anclasPoder[i] == null)
+                    continue;
+                if (edad < 0.85f)
+                    anclasPoder[i].localScale = Vector3.one * SalidaSuave((edad - i * 0.07f) / 0.38f);
+
+                var poder = (LogrosJuego.Poder)i;
+                bool cargado = LogrosJuego.Cargas(poder) > 0 || (poder == LogrosJuego.Poder.Escudo && escudoArmado);
+                if (!cargado || lucesPoder[i] == null)
+                    continue;
+                float pulso = 0.22f + Mathf.Sin(Time.unscaledTime * 2.6f + i) * 0.12f;
+                lucesPoder[i].color = new Color(1f, 0.86f, 0.4f, pulso);
+                float lado = 150f + Mathf.Sin(Time.unscaledTime * 2.6f + i) * 12f;
+                lucesPoder[i].rectTransform.sizeDelta = new Vector2(lado, lado);
+            }
+        }
+
+        IEnumerator CartelPoder(string frase)
+        {
+            if (avisoPoder == null)
+                yield break;
+
+            int id = ++cartelId;
+            avisoPoder.text = frase;
+            avisoPoder.gameObject.SetActive(true);
+            float t = 0f;
+            while (t < 1.7f && id == cartelId)
+            {
+                t += Time.unscaledDeltaTime;
+                float entrada = SalidaSuave(t / 0.32f);
+                avisoPoder.rectTransform.localScale = Vector3.one * Mathf.Lerp(0.72f, 1f, entrada);
+                var color = avisoPoder.color;
+                color.a = t < 1.2f ? 1f : Mathf.Clamp01(1f - (t - 1.2f) / 0.5f);
+                avisoPoder.color = color;
+                yield return null;
+            }
+
+            if (id == cartelId)
+                avisoPoder.gameObject.SetActive(false);
+        }
+
+        static float SalidaSuave(float t)
+        {
+            t = Mathf.Clamp01(t);
+            const float c1 = 1.70158f;
+            const float c3 = c1 + 1f;
+            return 1f + c3 * Mathf.Pow(t - 1f, 3f) + c1 * Mathf.Pow(t - 1f, 2f);
         }
 
         void PlayOne(string clipName)

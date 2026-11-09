@@ -20,10 +20,10 @@ namespace FluxLab
             {
                 nombre = "Mesa del Aprendiz",
                 corto = "Aprendiz",
-                detalle = "Tres ingredientes y cinco segundos para mirar.",
-                receta = 3,
+                detalle = "Cuatro ingredientes y cuatro segundos para mirar.",
+                receta = 4,
                 rondas = 3,
-                segundos = 5f
+                segundos = 4f
             },
             new Taller
             {
