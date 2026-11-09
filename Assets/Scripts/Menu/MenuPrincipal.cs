@@ -375,7 +375,7 @@ namespace FluxLab
             veloImagen.raycastTarget = true;
             Estirar(velo.GetComponent<RectTransform>());
 
-            var tarjeta = Nivel3UI.Panel(panelFicha.transform, "Tarjeta", new Vector2(0f, -165f), new Vector2(940f, 700f));
+            var tarjeta = Nivel3UI.Panel(panelFicha.transform, "Tarjeta", new Vector2(0f, 0f), new Vector2(940f, 700f));
             var sombra = tarjeta.gameObject.AddComponent<Shadow>();
             sombra.effectColor = new Color(0f, 0f, 0f, 0.45f);
             sombra.effectDistance = new Vector2(0f, -14f);

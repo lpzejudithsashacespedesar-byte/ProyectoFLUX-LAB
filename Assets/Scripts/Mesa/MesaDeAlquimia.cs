@@ -647,7 +647,9 @@ namespace FluxLab
             {
                 bool activo = i < largoReceta;
                 huecosReceta[i].gameObject.SetActive(activo);
-                huecosCaldero[i].gameObject.SetActive(activo);
+                // En el nivel 1 el caldero ya está pintado en el fondo. Esos huecos
+                // quedaban flotando debajo del pergamino.
+                huecosCaldero[i].gameObject.SetActive(activo && !vistaJardin);
                 if (!activo)
                     continue;
                 float centro = (largoReceta - 1) * 0.5f;
