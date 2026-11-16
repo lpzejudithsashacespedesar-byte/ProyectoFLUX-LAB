@@ -8,6 +8,14 @@ namespace FluxLab
     /// </summary>
     public static class LogrosJuego
     {
+        const string PremioVistazoKey = "flux.premio.vistazo2";
+        public static bool TieneVistazoDoble => PlayerPrefs.GetInt(PremioVistazoKey, 0) == 1;
+
+        public static void GanarVistazoDoble()
+        {
+            PlayerPrefs.SetInt(PremioVistazoKey, 1);
+            PlayerPrefs.Save();
+        }
         public enum Poder
         {
             Mirada,
@@ -114,6 +122,8 @@ namespace FluxLab
         public static int UsosAlEntrar(Poder poder)
         {
             int nivel = Mathf.Clamp(AjustesJuego.NivelSeleccionado, 1, 5);
+            if (poder == Poder.Mirada && TieneVistazoDoble)
+                return nivel >= 4 ? 3 : 2;
             if (nivel <= 1)
                 return 1;
 
