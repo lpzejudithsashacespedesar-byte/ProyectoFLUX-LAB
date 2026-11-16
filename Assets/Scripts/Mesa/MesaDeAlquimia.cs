@@ -40,6 +40,10 @@ namespace FluxLab
             IngredientKind.Lagrima
         };
 
+        IngredientKind[] ordenBandeja;
+        Vector2[] lugaresBandeja;
+        readonly Dictionary<IngredientKind, Text> numerosBandeja = new Dictionary<IngredientKind, Text>();
+
         struct Ing
         {
             public string Sprite;
@@ -95,6 +99,49 @@ namespace FluxLab
         };
 
         GameObject resultRoot;
+        ResultadoFrascos resultadoCompartido;
+        int IngredientesEnBandeja => TrayOrder.Length;
+
+        void BarajarBandeja()
+        {
+            if (!vistaJardin || cartas.Count != TrayOrder.Length)
+                return;
+            if (lugaresBandeja == null)
+            {
+                lugaresBandeja = new Vector2[TrayOrder.Length];
+                for (int i = 0; i < TrayOrder.Length; i++)
+                    lugaresBandeja[i] = cartas[TrayOrder[i]].anchoredPosition;
+            }
+            var anterior = ordenBandeja ?? TrayOrder;
+            ordenBandeja = (IngredientKind[])TrayOrder.Clone();
+            for (int i = ordenBandeja.Length - 1; i > 0; i--)
+            {
+                int j = Random.Range(0, i + 1);
+                var tmp = ordenBandeja[i];
+                ordenBandeja[i] = ordenBandeja[j];
+                ordenBandeja[j] = tmp;
+            }
+            bool igual = true;
+            for (int i = 0; i < ordenBandeja.Length; i++)
+                igual &= ordenBandeja[i] == anterior[i];
+            if (igual)
+            {
+                var tmp = ordenBandeja[0];
+                ordenBandeja[0] = ordenBandeja[1];
+                ordenBandeja[1] = tmp;
+            }
+            for (int i = 0; i < ordenBandeja.Length; i++)
+            {
+                var carta = cartas[ordenBandeja[i]];
+                carta.anchoredPosition = lugaresBandeja[i];
+                carta.Find("Numero").GetComponent<Text>().text = (i + 1).ToString();
+            }
+        }
+
+        Sprite PocionGanada()
+        {
+            return SpriteArchivo("Menu/pocion.png") ?? ImagenesFrascos.Premio;
+        }
         Text resultTitulo;
         Text resultNivel;
         Text resultPuntos;
@@ -106,6 +153,8 @@ namespace FluxLab
         Text resultAviso;
         Image[] resultEstrellas;
         Image resultFrasco;
+        Image brilloPocion;
+        GameObject peanaPocion;
         Image siguienteImagen;
         Text siguienteTexto;
         RectTransform magnusResultado;
@@ -236,10 +285,12 @@ namespace FluxLab
             if (!inputOpen || enPausa || preguntandoSalir)
                 return;
 
-            for (int i = 0; i < TrayOrder.Length; i++)
+            IngredientKind[] teclas = ordenBandeja != null && ordenBandeja.Length > 0 ? ordenBandeja : TrayOrder;
+            int visibles = vistaJardin ? teclas.Length : TrayOrder.Length;
+            for (int i = 0; i < visibles && i < 9; i++)
             {
                 if (Input.GetKeyDown(KeyCode.Alpha1 + i) || Input.GetKeyDown(KeyCode.Keypad1 + i))
-                    TryAdd(TrayOrder[i]);
+                    TryAdd(vistaJardin ? teclas[i] : TrayOrder[i]);
             }
 
             if (Input.GetKeyDown(KeyCode.Backspace) || Input.GetKeyDown(KeyCode.Space))
@@ -453,6 +504,7 @@ namespace FluxLab
 
         IEnumerator Round()
         {
+            BarajarBandeja();
             recipe.Clear();
             recipe.AddRange(DrawRecipe());
             placed.Clear();
@@ -520,6 +572,7 @@ namespace FluxLab
             if (recallTimes.Count > 0)
                 promedio /= recallTimes.Count;
 
+            int mejorAntes = AjustesJuego.MejorPuntaje;
             AjustesJuego.RegistrarPuntaje(score, correct);
             string aviso = "";
             if (correct > 0 && AjustesJuego.NivelSeleccionado >= AjustesJuego.NivelAlcanzado && AjustesJuego.NivelAlcanzado < 5)
@@ -534,6 +587,28 @@ namespace FluxLab
             string rango = estrellas >= 3 ? "Estrella de alquimista" : estrellas == 2 ? "Mano firme" : estrellas == 1 ? "Chispa del taller" : "El caldero espera";
             int precision = rondas <= 0 ? 0 : Mathf.RoundToInt(correct * 100f / rondas);
 
+            if (resultadoCompartido != null)
+            {
+                if (correct > 0)
+                {
+                    LogrosJuego.GanarVistazoDoble();
+                    aviso = "Dos miradas a la receta por partida.";
+                }
+                if (barraPoderes != null)
+                    barraPoderes.SetActive(false);
+                string nuevos = LogrosJuego.NombresNuevos(logrosAntes, LogrosJuego.Mascara());
+                resultadoCompartido.Mostrar(new EscenaFrascos.Resultado
+                {
+                    puntos = score, aciertos = correct, rondas = rondas,
+                    rachaMaxima = rachaMaxima, tiempoMedio = promedio,
+                    pasa = correct > 0, mejorPuntaje = AjustesJuego.MejorPuntaje,
+                    nuevoRecord = score > mejorAntes,
+                    haySiguiente = nivel < 5 && nivel + 1 <= AjustesJuego.NivelAlcanzado,
+                    aviso = string.IsNullOrEmpty(aviso) ? nuevos : aviso
+                });
+                return;
+            }
+
             resultTitulo.text = "Laboratorio de alquimia";
             resultNivel.text = "Resultados de nivel  ·  Nivel " + nivel;
             resultPuntos.text = "Puntos del nivel:  " + score;
@@ -543,7 +618,14 @@ namespace FluxLab
             resultRacha.text = "Racha máxima     " + rachaMaxima + " / " + rondas;
             resultPocion.text = "Poción del nivel " + nivel + ":  " + Pociones[nivel - 1];
             if (resultFrasco != null)
-                resultFrasco.sprite = Spr(nivel == 2 ? "frasco_rojo" : nivel == 3 ? "frasco_verde" : nivel == 4 ? "frasco_morado" : "frasco_azul");
+            {
+                resultFrasco.sprite = vistaJardin ? PocionGanada() : Spr(nivel == 2 ? "frasco_rojo" : nivel == 3 ? "frasco_verde" : nivel == 4 ? "frasco_morado" : "frasco_azul");
+                resultFrasco.gameObject.SetActive(!vistaJardin || estrellas > 0);
+            }
+            if (brilloPocion != null)
+                brilloPocion.gameObject.SetActive(!vistaJardin || estrellas > 0);
+            if (peanaPocion != null)
+                peanaPocion.SetActive(!vistaJardin || estrellas > 0);
             resultAviso.text = aviso;
 
             for (int i = 0; i < resultEstrellas.Length; i++)
@@ -551,24 +633,16 @@ namespace FluxLab
 
             if (vistaJardin)
             {
-                resultTitulo.text = estrellas > 0 ? "¡Nivel completado!" : "El caldero espera";
-                resultNivel.text = taller.nombre;
-                resultPuntos.text = "Puntos: " + score;
+                resultTitulo.text = estrellas >= 3 ? "¡Receta perfecta!" : estrellas > 0 ? "¡Nivel completado!" : "¡Sigue practicando!";
+                resultNivel.text = taller.nombre + "  ·  Nivel " + nivel;
+                resultPuntos.text = score.ToString();
                 resultRango.text = rango;
-                resultPrecision.text = "Precisión: " + precision + "%     Rondas: " + correct + " / " + rondas;
-                resultTiempo.text = "Tiempo medio: " + promedio.ToString("0.0", CultureInfo.InvariantCulture) + " s";
-                resultRacha.text = "Racha máxima: " + rachaMaxima + " / " + rondas;
-                if (!string.IsNullOrEmpty(aviso))
-                {
-                    resultPocion.text = "¡Felicidades! Pasaste al siguiente nivel:";
-                    resultAviso.text = NivelesTaller.De(AjustesJuego.NivelAlcanzado).nombre;
-                    resultAviso.color = Nivel3UI.Hex("#ffd86b");
-                }
-                else
-                {
-                    resultPocion.text = "Poción del nivel: " + Pociones[nivel - 1];
-                    resultAviso.text = "";
-                }
+                resultPrecision.text = precision + "%";
+                resultTiempo.text = promedio.ToString("0.0", CultureInfo.InvariantCulture) + " s";
+                resultRacha.text = rachaMaxima + " / " + rondas;
+                resultPocion.text = estrellas > 0 ? "Poción ganada:  " + Pociones[nivel - 1] : "Esta vez no hay poción";
+                resultAviso.text = aviso;
+                resultAviso.color = Nivel3UI.Hex("#ffd86b");
             }
 
             bool haySiguiente = nivel < 5 && nivel + 1 <= AjustesJuego.NivelAlcanzado;
@@ -1306,10 +1380,11 @@ namespace FluxLab
 
             const float cardWidth = 176f;
             const float gap = 14f;
-            float total = TrayOrder.Length * cardWidth + (TrayOrder.Length - 1) * gap;
+            int cantidad = TrayOrder.Length;
+            float total = cantidad * cardWidth + (cantidad - 1) * gap;
             float x = -total * 0.5f + cardWidth * 0.5f - 70f;
 
-            for (int i = 0; i < TrayOrder.Length; i++)
+            for (int i = 0; i < cantidad; i++)
             {
                 IngredientKind kind = TrayOrder[i];
                 Ing info = catalog[kind];
@@ -1372,17 +1447,32 @@ namespace FluxLab
             float[] cartaCentroX = { 137f, 382f, 628f, 876f, 1123f, 1373f };
             const float ancho = 1352f;
             float k = ancho / bandejaAncho;
-            var centro = new Vector2(-90f, -440f);
-            var arte = Nivel3UI.SpriteUI("bandeja");
-            CreateImage(parent, "Bandeja", arte, centro, new Vector2(ancho, bandejaAlto * k), true);
+            int cantidad = Mathf.Min(IngredientesEnBandeja, cartaCentroX.Length);
+            float corte = cantidad < cartaCentroX.Length
+                ? (cartaCentroX[cantidad - 1] + cartaCentroX[cantidad]) * 0.5f
+                : bandejaAncho;
+            float anchoVisible = corte * k;
+            float alto = bandejaAlto * k;
+            var centro = new Vector2(-40f, -440f);
 
-            for (int i = 0; i < TrayOrder.Length && i < cartaCentroX.Length; i++)
+            var marco = new GameObject("BandejaRecorte", typeof(RectTransform), typeof(RectMask2D));
+            marco.transform.SetParent(parent, false);
+            var marcoRt = marco.GetComponent<RectTransform>();
+            marcoRt.anchorMin = marcoRt.anchorMax = new Vector2(0.5f, 0.5f);
+            marcoRt.pivot = new Vector2(0.5f, 0.5f);
+            marcoRt.sizeDelta = new Vector2(anchoVisible, alto);
+            marcoRt.anchoredPosition = centro;
+
+            var arte = Nivel3UI.SpriteUI("bandeja");
+            CreateImage(marco.transform, "Bandeja", arte, new Vector2((ancho - anchoVisible) * 0.5f, 0f), new Vector2(ancho, alto), false);
+
+            for (int i = 0; i < cantidad; i++)
             {
                 IngredientKind kind = TrayOrder[i];
                 Ing info = catalog[kind];
-                float cx = (cartaCentroX[i] - bandejaAncho * 0.5f) * k;
+                float cx = (cartaCentroX[i] - corte * 0.5f) * k;
                 float cy = (bandejaAlto * 0.5f - cartaCentroY) * k;
-                var carta = CreateImage(parent, "Carta_" + kind, solid, centro + new Vector2(cx, cy), new Vector2(cartaAncho * k, cartaAlto * k), false);
+                var carta = CreateImage(marco.transform, "Carta_" + kind, solid, new Vector2(cx, cy), new Vector2(cartaAncho * k, cartaAlto * k), false);
                 carta.color = new Color(1f, 1f, 1f, 0.01f);
                 carta.raycastTarget = true;
                 var boton = carta.gameObject.AddComponent<Button>();
@@ -1400,12 +1490,13 @@ namespace FluxLab
                 name.rectTransform.sizeDelta = new Vector2(170f, 34f);
                 AddOutline(name, new Color(0.1f, 0.05f, 0.03f, 0.75f));
                 var numero = MakeText(carta.transform, (i + 1).ToString(), 22, Hex("#fff3da"), FontStyle.Bold);
+                numero.name = "Numero";
                 numero.rectTransform.anchoredPosition = new Vector2(-70f, 44f);
                 numero.rectTransform.sizeDelta = new Vector2(34f, 28f);
                 AddOutline(numero, new Color(0.1f, 0.05f, 0.03f, 0.75f));
             }
 
-            var vaciar = Nivel3UI.BotonConArte(parent, "boton_ancho", "Vaciar", new Vector2(790f, -440f), new Vector2(252f, 95f), Vaciar, 34);
+            var vaciar = Nivel3UI.BotonConArte(parent, "boton_ancho", "Vaciar", new Vector2(790f, centro.y), new Vector2(252f, 95f), Vaciar, 34);
             if (vaciar.transform.childCount > 0)
                 vaciar.transform.GetChild(0).GetComponent<RectTransform>().anchoredPosition = new Vector2(26f, 0f);
             Nivel3UI.Icono(vaciar.transform, "pocion.png", new Vector2(-66f, 0f), 48f);
@@ -1561,6 +1652,21 @@ namespace FluxLab
 
         void BuildResult(Transform parent)
         {
+            if (AjustesJuego.NivelSeleccionado == 1)
+            {
+                resultRoot = new GameObject("Resultado", typeof(RectTransform));
+                resultRoot.transform.SetParent(parent, false);
+                var escena = new EscenaFrascos(this);
+                escena.PrepararResultados();
+                resultadoCompartido = resultRoot.AddComponent<ResultadoFrascos>();
+                resultadoCompartido.NivelResultado = 1;
+                resultadoCompartido.PocionResultado = Pociones[0];
+                resultadoCompartido.PremioResultado = "Vistazo x2";
+                resultadoCompartido.IconoPremio = Nivel3UI.SpriteUI("poder_mirada");
+                resultadoCompartido.MostrarVidas = false;
+                resultadoCompartido.Construir(escena, VolverAlMenu, BeginSession, IrAlSiguiente, VolverAlMapa);
+                return;
+            }
             if (vistaJardin)
             {
                 BuildResultJardin(parent);
@@ -2650,6 +2756,13 @@ namespace FluxLab
 
         Sprite Spr(string name)
         {
+            if (vistaJardin)
+            {
+                Sprite propia = ImagenesFrascos.Figura(name);
+                if (propia != null)
+                    return propia;
+            }
+
             var sprite = Resources.Load<Sprite>("FluxLab/" + name);
             if (sprite != null)
                 return sprite;
