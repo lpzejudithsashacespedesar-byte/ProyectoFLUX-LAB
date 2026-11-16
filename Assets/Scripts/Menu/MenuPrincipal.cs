@@ -116,6 +116,8 @@ namespace FluxLab
             Estirar(fondo.rectTransform);
             FondoAnimado.Aplicar(fondo);
 
+            AnimarBurbujasCaldero(raiz);
+
             ConstruirTitulo(raiz);
 
             CrearBoton(raiz, "JUGAR", artes["estrella"], null, new Vector2(0f, 118f), 580f, 104f, true, IrAJugar);
@@ -594,6 +596,36 @@ namespace FluxLab
                 flotante.velocidad = 18f + (i % 4) * 11f;
                 flotante.amplitud = 10f + (i % 3) * 7f;
             }
+        }
+
+        void AnimarBurbujasCaldero(Transform raiz)
+        {
+            Texture2D[] burbujas = new Texture2D[3];
+            string[] nombres = { "burbuja_a", "burbuja_b", "burbuja_c" };
+            for (int i = 0; i < nombres.Length; i++)
+            {
+                Sprite sprite = Resources.Load<Sprite>("FluxLab/" + nombres[i]);
+                burbujas[i] = sprite != null
+                    ? sprite.texture
+                    : Resources.Load<Texture2D>("FluxLab/" + nombres[i]);
+            }
+            for (int i = 0; i < 18; i++)
+            {
+                Texture2D textura = burbujas[i % 3];
+
+                if (textura == null)
+                    continue;
+
+                float x = 400f + Random.Range(-50f, 50f);
+                float y = -175f + Random.Range(-5f, 5f);
+
+                var imagen = Imagen(raiz, "BurbujaCaldero" + i, textura, new Vector2(x, y), 32f);
+                imagen.color = new Color(0.45f, 1f, 0.25f, 0.9f);
+                var flotante = imagen.gameObject.AddComponent<BurbujaCaldero>();
+                flotante.velocidad = Random.Range(25f, 65f);
+                flotante.amplitud = Random.Range(8f, 22f);
+            }
+
         }
 
         void AbrirOpciones()
