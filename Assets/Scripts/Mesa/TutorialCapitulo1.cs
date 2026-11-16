@@ -29,7 +29,7 @@ namespace FluxLab
             new Hito
             {
                 titulo = "La promesa",
-                relato = "«Esta es la Mesa del Aprendiz: cuatro ingredientes y tres rondas. Cada acierto deja a Magnus un paso más cerca del Caldero Mayor.»",
+                relato = "«Esta es la Mesa del Aprendiz: tres ingredientes y tres rondas. Cada acierto deja a Magnus un paso más cerca del Caldero Mayor.»",
                 punto = new Vector2(-690f, 398f)
             },
             new Hito
