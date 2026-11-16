@@ -51,6 +51,11 @@ namespace FluxLab.Nivel2
         MagnusAnimado magnus;
 
         bool rapido;
+        public int? NivelResultado { get; set; }
+        public string PocionResultado { get; set; }
+        public string PremioResultado { get; set; }
+        public Sprite IconoPremio { get; set; }
+        public bool MostrarVidas { get; set; } = true;
         bool gano;
         bool haySiguiente;
         float relojConfeti;
@@ -103,7 +108,8 @@ namespace FluxLab.Nivel2
             rollo = imagen.rectTransform;
             titulo = escena.TextoMadera(rollo, "", 46, new Vector2(0f, 18f), new Vector2(520f, 60f));
             titulo.horizontalOverflow = HorizontalWrapMode.Overflow;
-            subtitulo = escena.TextoMadera(rollo, NivelesTaller.De(MesaDeFrascos.Nivel).nombre + "  ·  Nivel " + MesaDeFrascos.Nivel, 22, new Vector2(0f, -30f), new Vector2(520f, 32f));
+            int nivel = NivelResultado ?? MesaDeFrascos.Nivel;
+            subtitulo = escena.TextoMadera(rollo, NivelesTaller.De(nivel).nombre + "  ·  Nivel " + nivel, 22, new Vector2(0f, -30f), new Vector2(520f, 32f));
             subtitulo.color = new Color(0.9f, 0.79f, 0.55f, 1f);
         }
 
@@ -177,6 +183,7 @@ namespace FluxLab.Nivel2
             filas[1] = NuevaFila(FormasUI.Reloj, "Tiempo medio", -2f);
             filas[2] = NuevaFila(escena.ArteMenu("corona.png", Vector4.zero), "Racha máxima", -66f);
             filas[3] = NuevaFila(vida != null ? vida : escena.Spr("frasco_rojo"), "Frascos intactos", -130f);
+            filas[3].rect.gameObject.SetActive(MostrarVidas);
         }
 
         Fila NuevaFila(Sprite icono, string etiqueta, float y)
@@ -212,7 +219,7 @@ namespace FluxLab.Nivel2
             peana.pixelsPerUnitMultiplier = 4f;
             peanaPocion = peana.gameObject;
             // La poción dibujada como los íconos de los botones (menú), para que vaya con la madera tallada.
-            Sprite premio = escena.ArteMenu("pocion.png", Vector4.zero);
+            Sprite premio = IconoPremio != null ? IconoPremio : escena.ArteMenu("pocion.png", Vector4.zero);
             if (premio == null)
                 premio = ImagenesFrascos.Premio;
             pocion = escena.Imagen(transform, "Pocion", premio != null ? premio : escena.Spr("frasco_rojo"), new Vector2(160f, -180f), new Vector2(130f, 170f), true).rectTransform;
@@ -277,7 +284,9 @@ namespace FluxLab.Nivel2
                 : "El caldero espera";
             mejorTexto.text = "Mejor puntaje:  " + r.mejorPuntaje;
             // La poción solo se gana si pasó el nivel; si no, la placa solo da el aviso.
-            nombrePocion.text = r.pasa ? "Poción ganada:  " + FondoFrascos.Actual.pocion : "Esta vez no hay poción";
+            nombrePocion.text = PremioResultado != null
+                ? (r.pasa ? "Premio:  " + PremioResultado : "Completa el nivel para ganar Vistazo x2")
+                : (r.pasa ? "Poción ganada:  " + (PocionResultado ?? FondoFrascos.Actual.pocion) : "Esta vez no hay poción");
             avisoTexto.text = r.aviso;
             pocion.gameObject.SetActive(r.pasa);
             peanaPocion.SetActive(r.pasa);

@@ -176,6 +176,15 @@ namespace FluxLab.Nivel2
             this.host = host;
         }
 
+        public void PrepararResultados()
+        {
+            font = Nivel3UI.Fuente;
+            letraTallada = font != null && font.name.Contains("Lilita");
+            solido = CrearSolido();
+            disco = CrearDisco(96);
+            sfx = host.GetComponent<AudioSource>();
+        }
+
         // ───────────────────────── Construcción ─────────────────────────
 
         /// <summary>Qué hace cada botón de la pantalla. Lo llena MesaDeFrascos.</summary>
