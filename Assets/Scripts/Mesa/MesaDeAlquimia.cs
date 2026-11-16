@@ -195,6 +195,7 @@ namespace FluxLab
 
         void Start()
         {
+            AplicarColoresMagnus3D();
             if (AjustesJuego.NivelSeleccionado <= 1)
             {
                 var tutorial = gameObject.AddComponent<TutorialCapitulo1>();
@@ -778,23 +779,64 @@ namespace FluxLab
             sombra.color = new Color(0.08f, 0.04f, 0.03f, 0.35f);
             sombraRect = sombra.rectTransform;
 
-            var cuerpo = CreateRaw(parent, "Magnus", magnusTex != null ? magnusTex : Tex("magnus"), Color.white);
+            RenderTexture rtMagnus = Resources.Load<RenderTexture>("Personaje/Magnus_RT");
+            Texture texturaInicial = rtMagnus != null ? (Texture)rtMagnus : (magnusTex != null ? magnusTex : Tex("magnus"));
+
+            var cuerpo = CreateRaw(parent, "Magnus", null, Color.white);
+            cuerpo.texture = texturaInicial;
             magnusRect = cuerpo.rectTransform;
             magnusRect.anchorMin = magnusRect.anchorMax = new Vector2(0.5f, 0.5f);
             magnusRect.pivot = new Vector2(0.5f, 0.5f);
             float altoMagnus = vistaJardin ? 540f : 380f;
-            magnusRect.sizeDelta = new Vector2(altoMagnus * 0.42f, altoMagnus);
+
+            if (rtMagnus != null)
+            {
+                float proporcion = (float)rtMagnus.width / Mathf.Max(1, rtMagnus.height);
+                magnusRect.sizeDelta = new Vector2(altoMagnus * proporcion, altoMagnus);
+            }
+            else
+            {
+                magnusRect.sizeDelta = new Vector2(altoMagnus * 0.42f, altoMagnus);
+            }
+
             magnusBase = vistaJardin ? new Vector2(-520f, -65f) : new Vector2(-430f, 22f);
             magnusRect.anchoredPosition = magnusBase;
 
-            if (AjustesJuego.Accesorio == 1)
+
+
+            if (rtMagnus == null && AjustesJuego.Accesorio == 1)
             {
                 var frasco = CreateImage(cuerpo.transform, "Frasco", Spr("frasco_morado"), new Vector2(-36f, -28f), new Vector2(36f, 48f), true);
                 frasco.rectTransform.localScale = Vector3.one;
             }
 
-            if (vistaJardin)
+            if (rtMagnus == null && vistaJardin)
                 CambiarMagnusPorPoses(parent);
+        }
+
+        void AplicarColoresMagnus3D()
+        {
+            GameObject estudio = GameObject.Find("EstudioMagnus");
+            if (estudio == null)
+                return;
+
+            SkinnedMeshRenderer smr = estudio.GetComponentInChildren<SkinnedMeshRenderer>(true);
+            if (smr == null || smr.material == null)
+                return;
+
+            string[] hexPelos = { "#ffffff", "#8a5a32", "#e2b34a", "#c4483a", "#e4ddd4" };
+            string[] hexTunicas = { "#ffffff", "#d64545", "#3a78d8", "#e2b53a", "#3ea86a", "#e07a2a" };
+
+            int idxPelo = Mathf.Clamp(AjustesJuego.Pelo, 0, hexPelos.Length - 1);
+            int idxTunica = Mathf.Clamp(AjustesJuego.ColorTunica, 0, hexTunicas.Length - 1);
+
+            Color tintePelo = idxPelo == 0 ? Color.white : Hex(hexPelos[idxPelo]);
+            Color tinteTunica = idxTunica == 0 ? Color.white : Hex(hexTunicas[idxTunica]);
+            tintePelo.a = 1f;
+            tinteTunica.a = 1f;
+
+            smr.material.SetColor("_ColorPelo", tintePelo);
+            smr.material.SetColor("_ColorTunica", tinteTunica);
         }
 
         void CambiarMagnusPorPoses(Transform parent)
