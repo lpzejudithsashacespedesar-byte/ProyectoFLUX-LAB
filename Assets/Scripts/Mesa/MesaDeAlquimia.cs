@@ -70,6 +70,7 @@ namespace FluxLab
         RectTransform sombraRect;
         Vector2 magnusBase;
         MagnusAnimado magnusVivo;
+        Animator animadorMagnus3D;
         readonly Dictionary<IngredientKind, RectTransform> cartas = new Dictionary<IngredientKind, RectTransform>();
         Transform capaFrascos;
         ParticulasUI efectosFrascos;
@@ -245,6 +246,21 @@ namespace FluxLab
         void Start()
         {
             AplicarColoresMagnus3D();
+            GameObject estudio = GameObject.Find("EstudioMagnus");
+            if (estudio != null)
+                animadorMagnus3D = estudio.GetComponentInChildren<Animator>(true);
+
+            if (animadorMagnus3D == null)
+            {
+                foreach (var smr in FindObjectsByType<SkinnedMeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                {
+                    if (smr != null && smr.sharedMaterial != null && smr.sharedMaterial.HasProperty("_ColorTunica"))
+                    {
+                        animadorMagnus3D = smr.GetComponentInParent<Animator>(true);
+                        break;
+                    }
+                }
+            }
             if (AjustesJuego.NivelSeleccionado <= 1)
             {
                 var tutorial = gameObject.AddComponent<TutorialCapitulo1>();
@@ -2192,6 +2208,21 @@ namespace FluxLab
             animo = siguiente;
             animoReloj = 0f;
             animoDuracion = duracion;
+
+            if (animadorMagnus3D != null)
+            {
+                if (siguiente == Animo.Remueve)
+                {
+                    animadorMagnus3D.ResetTrigger("Explosion");
+                    animadorMagnus3D.SetTrigger("Caldero");
+                }
+                else if (siguiente == Animo.SeEquivoca)
+                {
+                    animadorMagnus3D.ResetTrigger("Caldero");
+                    animadorMagnus3D.SetTrigger("Explosion");
+                }
+            }
+
             if (magnusVivo == null)
                 return;
 
@@ -2207,7 +2238,7 @@ namespace FluxLab
 
         void AnimarMagnus()
         {
-            if (magnusVivo != null || magnusRect == null)
+            if (magnusVivo != null || animadorMagnus3D != null || magnusRect == null)
                 return;
 
             animoReloj += Time.deltaTime;
