@@ -49,6 +49,12 @@ namespace FluxLab.Nivel2
         Image siguienteImagen;
         Text siguienteTexto;
         MagnusAnimado magnus;
+        RawImage magnus3D;
+        GameObject magnusFondo;
+        Animator animadorMagnus3D;
+        Transform transformMagnusBase;
+        Quaternion rotacionOriginalMagnus;
+        bool tieneRotacionOriginal;
 
         bool rapido;
         public int? NivelResultado { get; set; }
@@ -90,7 +96,42 @@ namespace FluxLab.Nivel2
             ConstruirDesempeno();
             ConstruirPocion();
 
-            magnus = MagnusAnimado.Crear(transform, new Vector2(-140f, -330f), 400f, PersonalizacionMagnus.Guardada, AjustesJuego.Accesorio == 1);
+            RenderTexture rtMagnus = Resources.Load<RenderTexture>("Personaje/Magnus_RT");
+            SkinnedMeshRenderer smrMagnus = BuscarMagnus3D();
+
+            if (rtMagnus != null && smrMagnus != null)
+            {
+                animadorMagnus3D = smrMagnus.GetComponentInParent<Animator>(true);
+                if (animadorMagnus3D != null)
+                    transformMagnusBase = animadorMagnus3D.transform;
+
+                var goMagnus = new GameObject("Magnus3DResultado", typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
+                goMagnus.transform.SetParent(transform, false);
+                magnus3D = goMagnus.GetComponent<RawImage>();
+                magnus3D.texture = rtMagnus;
+                magnus3D.raycastTarget = false;
+
+                var rt = magnus3D.rectTransform;
+                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+                rt.pivot = new Vector2(0.5f, 0f);
+                float alto = 460f;
+                float proporcion = (float)rtMagnus.width / Mathf.Max(1, rtMagnus.height);
+                rt.sizeDelta = new Vector2(alto * proporcion, alto);
+                rt.anchoredPosition = new Vector2(-145f, -355f);
+
+                foreach (var raw in FindObjectsByType<RawImage>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                {
+                    if (raw != magnus3D && raw.texture == rtMagnus)
+                    {
+                        magnusFondo = raw.gameObject;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                magnus = MagnusAnimado.Crear(transform, new Vector2(-140f, -330f), 400f, PersonalizacionMagnus.Guardada, AjustesJuego.Accesorio == 1);
+            }
 
             ConstruirBotones(irAlMenu, reintentar, siguiente, irAlMapa);
 
@@ -258,6 +299,29 @@ namespace FluxLab.Nivel2
             gameObject.SetActive(false);
         }
 
+        void OnDisable()
+        {
+            if (magnusFondo != null)
+                magnusFondo.SetActive(true);
+            if (transformMagnusBase != null && tieneRotacionOriginal)
+                transformMagnusBase.localRotation = rotacionOriginalMagnus;
+            if (animadorMagnus3D != null)
+            {
+                animadorMagnus3D.ResetTrigger("Baile");
+                animadorMagnus3D.Play("mixamo_com", 0, 0f);
+            }
+        }
+
+        static SkinnedMeshRenderer BuscarMagnus3D()
+        {
+            foreach (var smr in FindObjectsByType<SkinnedMeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (smr != null && smr.sharedMaterial != null && smr.sharedMaterial.HasProperty("_ColorTunica"))
+                    return smr;
+            }
+            return null;
+        }
+
         public void Mostrar(EscenaFrascos.Resultado r)
         {
             gameObject.SetActive(true);
@@ -320,7 +384,7 @@ namespace FluxLab.Nivel2
             brilloPocion.color = new Color(0.82f, 0.68f, 1f, 0f);
             placaPocion.localScale = Vector3.zero;
             botones.anchoredPosition = new Vector2(0f, -300f);
-            magnus.gameObject.SetActive(false);
+            if (magnus3D != null) magnus3D.gameObject.SetActive(false);
 
             // 1. Se oscurece y el título se desenrolla.
             yield return Animar(0.3f, k => velo.color = new Color(0.05f, 0.03f, 0.07f, 0.62f * k));
@@ -413,13 +477,38 @@ namespace FluxLab.Nivel2
 
             // 7. La poción sube brillando y aparece Magnus.
             escena.Sonar("Nivel2/corcho", 0.8f);
-            magnus.gameObject.SetActive(true);
-            if (perfecto)
-                magnus.FinalAlegre();
-            else if (r.pasa)
-                magnus.FinalContento();
-            else
-                magnus.FinalAnimo();
+            if (magnus3D != null)     // baile del final de magnus
+            {
+                if (magnusFondo != null)
+                    magnusFondo.SetActive(false);
+
+                magnus3D.gameObject.SetActive(true);
+                if (transformMagnusBase != null)
+                {
+                    if (!tieneRotacionOriginal)
+                    {
+                        rotacionOriginalMagnus = transformMagnusBase.localRotation;
+                        tieneRotacionOriginal = true;
+                    }
+                    transformMagnusBase.localRotation = Quaternion.Euler(0f, 180f, 0f);
+                }
+                if (animadorMagnus3D != null && r.pasa)
+                {
+                    animadorMagnus3D.ResetTrigger("Caldero");
+                    animadorMagnus3D.ResetTrigger("Explosion");
+                    animadorMagnus3D.SetTrigger("Baile");
+                }
+            }
+            else if (magnus != null)
+            {
+                magnus.gameObject.SetActive(true);
+                if (perfecto)
+                    magnus.FinalAlegre();
+                else if (r.pasa)
+                    magnus.FinalContento();
+                else
+                    magnus.FinalAnimo();
+            }
             yield return Animar(0.55f, k =>
             {
                 pocion.anchoredPosition = new Vector2(160f, Mathf.LerpUnclamped(-600f, -180f, Rebote(k)));
